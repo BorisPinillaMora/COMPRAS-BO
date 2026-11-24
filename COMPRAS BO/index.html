@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Centro de compras | Compras BO Packaging</title>
+
+  <!-- Tipografía corporativa -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+
+  <!-- Estilos del dashboard -->
+  <link rel="stylesheet" href="css/estilos.css">
+
+  <!-- Librerías: lectura de Excel (SheetJS) y gráficos (Chart.js).
+       Si no hay internet, se usan las copias locales de js/vendor/ (ver LEEME.md) -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script>window.XLSX || document.write('<script src="js/vendor/xlsx.full.min.js"><\/script>');</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>window.Chart || document.write('<script src="js/vendor/chart.umd.min.js"><\/script>');</script>
+</head>
+<body data-modulo="inicio">
+
+  <!-- ============ BARRA SUPERIOR (igual en todas las páginas) ============ -->
+  <header class="barra-top">
+    <div class="contenedor">
+      <a class="logo" href="index.html" aria-label="Inicio">
+        <img src="assets/bo-packaging-logo.png" alt="">
+      </a>
+      <nav class="nav">
+        <a href="index.html" class="activo" data-ico="inicio">Inicio</a>
+        <a href="bmat.html" data-ico="capas">Bodega Materias Primas</a>
+        <a href="panol.html" data-ico="llave">PAÑOL</a>
+        <a href="ropa-verano.html" data-ico="polera"> ROPA</a>
+        <a href="zapatos.html" data-ico="zapato">Zapatos</a>
+      </nav>
+      <div class="barra-acciones">
+        <button type="button" class="btn claro btn-lista" data-accion="abrir-lista" data-ico="carro"
+                data-tip="Tu lista de compra (pre-OC) agrupada por proveedor">Lista
+          <span class="contador" data-contador-lista>0</span></button>
+        <div class="menu-datos">
+          <button type="button" class="btn claro" id="bo-btn-menu-datos" aria-expanded="false" aria-controls="bo-menu-datos">Datos</button>
+          <div class="menu-datos-panel" id="bo-menu-datos" hidden>
+            <div class="info-archivo" id="bo-info-archivo"></div>
+            <button type="button" class="btn claro" id="bo-btn-cambiar-carpeta">Cambiar carpeta</button>
+            <button type="button" class="btn claro" data-accion="cargar" data-ico="refrescar">Actualizar Datos</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- ============ CABECERA ============ -->
+    <section class="hero">
+      <div class="hero-ico" data-ico="carro"></div>
+      <div class="hero-txt">
+        <small>BO Packaging · Abastecimiento</small>
+        <h1>Centro de compras</h1>
+        <p>Motor de decisiones para la gestión de compras</p>
+      </div>
+      <div class="hero-acciones">
+        <button type="button" class="btn claro" data-accion="abrir-lista" data-ico="carro">Ver lista de compra</button>
+      </div>
+    </section>
+
+    <!-- ============ RESUMEN (aparece después de cargar) ============ -->
+    <div id="resumen" hidden>
+
+      <div class="seccion-titulo" data-ico="capas"><h2>Módulos</h2></div>
+      <section class="tarjetas-modulos" id="tarjetas-modulos"></section>
+
+      <div class="seccion-titulo prioridades-encabezado" data-ico="alerta">
+        <h2 id="titulo-prioridades">Prioridades de compra (todos los modulos)</h2>
+        <div class="prioridades-acciones">
+          <button type="button" class="btn acento" id="btn-sugeridos-todos" data-ico="carro"
+                  data-tip="Agrega a la lista todos los artículos con Stock 0 o Comprar">Agregar todos los sugeridos</button>
+          <button type="button" class="prioridades-toggle" id="btn-toggle-prioridades"
+                  aria-label="Expandir prioridades de compra" aria-expanded="false" aria-controls="panel-prioridades">
+            <span class="prioridades-chevron" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+      <section class="prioridades-panel cerrado" id="panel-prioridades" aria-labelledby="titulo-prioridades" inert>
+        <div class="prioridades-panel-contenido">
+          <section class="card">
+            <div class="tabla-scroll">
+              <table class="datos" id="urgencias">
+                <thead><tr><th>Módulo</th><th>Código</th><th>Descripción</th><th>Proveedor</th>
+                  <th class="num">Stock</th><th class="num">Sugerido</th><th class="num">$ Sugerido</th><th>Decisión</th><th class="accion"></th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- Revisión de columnas: sirve para comprobar que el Excel se leyó bien -->
+      <details class="revision">
+        <summary data-ico="tabla">Revisar qué columnas del Excel se están leyendo</summary>
+        <p style="color:var(--bo-texto-suave)">Si cambias la estructura de una pestaña, ajusta la letra en <b>js/config.js</b>.</p>
+        <div class="revision-grid" id="revision-columnas"></div>
+        <p style="margin-top:14px"><button type="button" class="btn" id="btn-borrar" data-ico="basura">Borrar datos guardados en este navegador</button></p>
+      </details>
+    </div>
+  </main>
+
+  <!-- ============ CARGA DEL EXCEL ============ -->
+  <div class="carga-excel-final" hidden>
+    <button type="button" class="btn primario btn-carga-excel-final" id="btn-abrir-modal-carga"
+            aria-haspopup="dialog" aria-controls="modal-carga-excel" data-ico="subir">
+      Cargar o actualizar los datos desde aquí
+    </button>
+  </div>
+  <dialog class="modal-carga-excel" id="modal-carga-excel" aria-labelledby="titulo-modal-carga">
+    <div class="modal-carga-cabecera">
+      <h2 id="titulo-modal-carga">Carga o actualiza tu Excel de compras</h2>
+      <button type="button" class="modal-carga-cerrar" id="btn-cerrar-modal-carga" aria-label="Cerrar">×</button>
+    </div>
+    <p>Selecciona el archivo COMPRAS FLEXIBLE. Se leen las pestañas BMAT, PAÑOL, ROPA VERANO, ZAPATOS y OC PENDIENTE.</p>
+    <button type="button" class="zona-carga modal-carga-zona" data-accion="cargar" data-ico="subir">
+      <span><b>Seleccionar archivo Excel</b><small>Formatos compatibles: .xlsx, .xlsm y .xls</small></span>
+    </button>
+    <p class="modal-carga-ayuda">También puedes arrastrar el archivo a cualquier parte de la página.</p>
+  </dialog>
+
+  <br></br>
+    <br></br>
+      <br></br>
+
+
+
+  <!-- ============ PIE ============ -->
+  <footer class="pie">
+    <b>BO Packaging</b> · Motor de decisiones · Boris Pinilla 2026<br>
+    
+  </footer>
+
+  <!-- ============ SCRIPTS ============ -->
+  <script src="js/config.js"></script>
+  <script src="js/comun.js"></script>
+  <script src="js/inicio.js"></script>
+</body>
+</html>

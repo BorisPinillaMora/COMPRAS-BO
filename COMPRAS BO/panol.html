@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAÑOL | Compras BO Packaging</title>
+
+  <!-- Tipografía corporativa -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+
+  <!-- Estilos del dashboard -->
+  <link rel="stylesheet" href="css/estilos.css">
+
+  <!-- Librerías: lectura de Excel (SheetJS) y gráficos (Chart.js).
+       Si no hay internet, se usan las copias locales de js/vendor/ (ver LEEME.md) -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script>window.XLSX || document.write('<script src="js/vendor/xlsx.full.min.js"><\/script>');</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>window.Chart || document.write('<script src="js/vendor/chart.umd.min.js"><\/script>');</script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+</head>
+<body data-modulo="panol">
+
+  <!-- ============ BARRA SUPERIOR (igual en todas las páginas) ============ -->
+  <header class="barra-top">
+    <div class="contenedor">
+      <a class="logo" href="index.html" aria-label="Inicio">
+        <img src="assets/bo-packaging-logo.png" alt="">
+      </a>
+      <nav class="nav">
+        <a href="index.html" data-ico="inicio">Inicio</a>
+        <a href="bmat.html" data-ico="capas">Bodega Materias Primas</a>
+        <a href="panol.html" class="activo" data-ico="llave">PAÑOL</a>
+        <a href="ropa-verano.html" data-ico="polera"> ROPA</a>
+        <a href="zapatos.html" data-ico="zapato">Zapatos</a>
+      </nav>
+      <div class="barra-acciones">
+        <button type="button" class="btn claro btn-lista" data-accion="abrir-lista" data-ico="carro"
+                data-tip="Tu lista de compra (pre-OC) agrupada por proveedor">Lista
+          <span class="contador" data-contador-lista>0</span></button>
+        <div class="menu-datos">
+          <button type="button" class="btn claro" id="bo-btn-menu-datos" aria-expanded="false" aria-controls="bo-menu-datos">Datos</button>
+          <div class="menu-datos-panel" id="bo-menu-datos" hidden>
+            <div class="info-archivo" id="bo-info-archivo"></div>
+            <button type="button" class="btn claro" id="bo-btn-cambiar-carpeta">Cambiar carpeta</button>
+            <button type="button" class="btn claro" data-accion="cargar" data-ico="refrescar">Actualizar Datos</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- ============ CABECERA DEL MÓDULO ============ -->
+    <section class="hero">
+      <div class="hero-ico" data-ico="llave"></div>
+      <div class="hero-txt">
+        <small>Abastecimiento · Decisión de compra</small>
+        <h1>PAÑOL</h1>
+        <p>Repuestos e insumos de mantención. Prioriza lo que falta y arma tu pre-OC por proveedor.</p>
+      </div>
+      <div class="hero-acciones">
+        <button type="button" class="btn primario btn-sugeridos-principal" id="btn-sugeridos" data-ico="carro"
+                data-tip="Agrega a la lista todos los artículos de la vista actual que tienen compra sugerida">Agregar sugeridos</button>
+      </div>
+    </section>
+
+    <!-- ============ SIN DATOS ============ -->
+    <section id="estado-vacio" hidden>
+      <div class="zona-carga" data-accion="cargar" data-ico="subir">
+        <h2>Carga tu Excel de compras</h2>
+        <p id="mensaje-vacio">Haz clic aquí o arrastra el archivo a cualquier parte de la página.</p>
+      </div>
+    </section>
+
+          <!-- Conclusiones automáticas -->
+      <section class="card" style="margin-bottom:18px">
+        <div class="card-cab" data-ico="foco"><h3>Conclusiones automáticas</h3><small>Se actualizan con los filtros</small></div>
+        <ul class="conclusiones" id="conclusiones"></ul>
+      </section>
+
+    <!-- ============ CONTENIDO ============ -->
+    <div id="contenido" hidden>
+
+      <!-- Indicadores -->
+      <section class="kpis" id="kpis"></section>
+
+      <!-- Filtros -->
+      <section class="filtros">
+        <div class="campo buscar">
+          <label for="f-texto">Buscar</label>
+          <input id="f-texto" type="search" placeholder="Código, descripción, proveedor u OC…" autocomplete="off">
+          <span data-ico="buscar"></span>
+        </div>
+        <div class="campo">
+          <label for="f-categoria">Categoría</label>
+          <select id="f-categoria"></select>
+        </div>
+        <div class="campo">
+          <label for="f-proveedor">Proveedor</label>
+          <select id="f-proveedor"></select>
+        </div>
+        <div class="campo" id="caja-estado" hidden>
+          <label for="f-estado">Estado</label>
+          <select id="f-estado"></select>
+        </div>
+        <label class="check" for="f-alcance-bajo-30">
+          <input type="checkbox" id="f-alcance-bajo-30"> Alcance bajo 30 días
+        </label>
+        <div class="campo" id="caja-marca" hidden>
+          <label for="f-marca" id="etq-marca">Marca</label>
+          <select id="f-marca"></select>
+        </div>
+        <label class="check" id="caja-visibles" hidden
+               data-tip="Oculta las filas que están escondidas en tu Excel">
+          <input type="checkbox" id="f-visibles"> Solo filas visibles en Excel
+        </label>
+        <div class="filtros-botones">
+          <button type="button" class="btn" id="btn-limpiar" data-ico="refrescar">Limpiar filtros</button>
+        </div>
+      </section>
+      <section class="chips" id="chips-decision"></section>
+      <div class="filtros-activos" id="filtros-activos"></div>
+
+      <!-- Gráficos (clic en cualquier barra o sector para filtrar) -->
+      <section class="graficos" id="graficos">
+        <article class="card">
+          <div class="card-cab" data-ico="grafico"><h3>Estado de compra</h3><small>Clic para filtrar</small></div>
+          <div class="lienzo"><canvas id="g-decision"></canvas></div>
+        </article>
+        <article class="card">
+          <div class="card-cab" data-ico="camion"><h3 id="t-proveedor">Top proveedores</h3><small>Clic para filtrar</small></div>
+          <div class="lienzo"><canvas id="g-proveedor"></canvas></div>
+        </article>
+        <article class="card">
+          <div class="card-cab" data-ico="capas"><h3>Categorías por estado</h3><small>Clic para filtrar</small></div>
+          <div class="lienzo"><canvas id="g-categoria"></canvas></div>
+        </article>
+        <article class="card" id="card-alcance">
+          <div class="card-cab" data-ico="reloj"><h3>Alcance del stock</h3><small>Días de cobertura · clic para filtrar</small></div>
+          <div class="lienzo"><canvas id="g-alcance"></canvas></div>
+        </article>
+        <article class="card" id="card-mapa" hidden>
+          <div class="card-cab" data-ico="tabla"><h3>Mapa de tallas</h3><small>Stock / mínimo · clic para ver detalle</small></div>
+          <div class="mapa-scroll" id="mapa-calor"></div>
+        </article>
+      </section>
+
+      <!-- Tabla de detalle -->
+      <section class="card" id="tabla-card">
+        <div class="tabla-barra">
+          <h3 data-ico="tabla">Detalle de artículos</h3>
+          <small id="tabla-resumen"></small>
+          <button class="btn claro chico" id="btn-exportar-tabla" type="button" data-ico="bajar">Exportar a Excel</button>
+        </div>
+        <div class="tabla-scroll">
+          <table class="datos" id="tabla"><thead></thead><tbody></tbody></table>
+        </div>
+        <div class="paginacion" id="paginacion"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ============ PIE ============ -->
+  <footer class="pie">
+    <b>BO Packaging</b> · Motor de decisiones · Boris Pinilla 2026<br>
+   
+  </footer>
+
+  <!-- ============ SCRIPTS (el orden importa) ============ -->
+  <script src="js/config.js"></script>
+  <script src="js/comun.js"></script>
+  <script src="js/modulo.js"></script>
+</body>
+</html>
