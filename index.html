@@ -32,8 +32,9 @@
         <a href="index.html" class="activo" data-ico="inicio">Inicio</a>
         <a href="bmat.html" data-ico="capas">Bodega Materias Primas</a>
         <a href="panol.html" data-ico="llave">PAÑOL</a>
-        <a href="ropa-verano.html" data-ico="polera"> ROPA</a>
+        <a href="ropa.html" data-ico="polera"> ROPA</a>
         <a href="zapatos.html" data-ico="zapato">Zapatos</a>
+        <a href="oc-abiertas.html" data-ico="camion">OC ABIERTAS</a>
       </nav>
       <div class="barra-acciones">
         <button type="button" class="btn claro btn-lista" data-accion="abrir-lista" data-ico="carro"
@@ -45,6 +46,7 @@
             <div class="info-archivo" id="bo-info-archivo"></div>
             <button type="button" class="btn claro" id="bo-btn-cambiar-carpeta">Cambiar carpeta</button>
             <button type="button" class="btn claro" data-accion="cargar" data-ico="refrescar">Actualizar Datos</button>
+            <a href="clusters.html" class="btn claro" data-ico="capas">Crear cluster</a>
           </div>
         </div>
       </div>
@@ -54,7 +56,10 @@
   <main class="contenedor">
 
     <!-- ============ CABECERA ============ -->
-    <section class="hero">
+    <section class="hero hero-inicio">
+      <video class="hero-inicio-video" muted loop playsinline preload="metadata" aria-hidden="true" tabindex="-1">
+        <source src="assets/BO Packaging.mp4" type="video/mp4">
+      </video>
       <div class="hero-ico" data-ico="carro"></div>
       <div class="hero-txt">
         <small>BO Packaging · Abastecimiento</small>
@@ -123,7 +128,7 @@
     <button type="button" class="zona-carga modal-carga-zona" data-accion="cargar" data-ico="subir">
       <span><b>Seleccionar archivo Excel</b><small>Formatos compatibles: .xlsx, .xlsm y .xls</small></span>
     </button>
-    <p class="modal-carga-ayuda">También puedes arrastrar el archivo a cualquier parte de la página.</p>
+    <p class="modal-carga-ayuda">También puedes arrastrar el archivo a cualquier parte de la página. Se leen las pestañas de inventario y OC ABIERTAS.</p>
   </dialog>
 
   <br></br>
@@ -141,6 +146,7 @@
   <!-- ============ SCRIPTS ============ -->
   <script src="js/config.js"></script>
   <script src="js/comun.js"></script>
+  <script src="js/clusters.js"></script>
   <script src="js/inicio.js"></script>
 </body>
 </html>

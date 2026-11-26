@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OC ABIERTAS | Compras BO Packaging</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script>window.XLSX || document.write('<script src="js/vendor/xlsx.full.min.js"><\/script>');</script>
+</head>
+<body data-modulo="oc-abiertas">
+  <header class="barra-top">
+    <div class="contenedor">
+      <a class="logo" href="index.html" aria-label="Inicio"><img src="assets/bo-packaging-logo.png" alt=""></a>
+      <nav class="nav">
+        <a href="index.html" data-ico="inicio">Inicio</a>
+        <a href="bmat.html" data-ico="capas">Bodega Materias Primas</a>
+        <a href="panol.html" data-ico="llave">PAÑOL</a>
+        <a href="ropa.html" data-ico="polera">ROPA</a>
+        <a href="zapatos.html" data-ico="zapato">Zapatos</a>
+        <a href="oc-abiertas.html" class="activo" data-ico="camion">OC ABIERTAS</a>
+      </nav>
+      <div class="barra-acciones">
+        <button type="button" class="btn claro btn-lista" data-accion="abrir-lista" data-ico="carro"
+                data-tip="Tu lista de compra (pre-OC) agrupada por proveedor">Lista
+          <span class="contador" data-contador-lista>0</span></button>
+        <div class="menu-datos">
+          <button type="button" class="btn claro" id="bo-btn-menu-datos" aria-expanded="false" aria-controls="bo-menu-datos">Datos</button>
+          <div class="menu-datos-panel" id="bo-menu-datos" hidden>
+            <div class="info-archivo" id="bo-info-archivo"></div>
+            <button type="button" class="btn claro" id="bo-btn-cambiar-carpeta">Cambiar carpeta</button>
+            <button type="button" class="btn claro" data-accion="cargar" data-ico="refrescar">Actualizar Datos</button>
+            <a href="clusters.html" class="btn claro" data-ico="capas">Crear cluster</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="contenedor">
+    <section class="hero">
+      <div class="hero-ico" data-ico="camion"></div>
+      <div class="hero-txt">
+        <small>Abastecimiento · Seguimiento de compras</small>
+        <h1>OC ABIERTAS</h1>
+        <p>Antigüedad y detalle de órdenes agrupadas por número de OC.</p>
+      </div>
+    </section>
+
+    <section id="oc-estado-vacio" hidden>
+      <div class="zona-carga" data-accion="cargar" data-ico="subir">
+        <h2>Carga tu Excel de compras</h2>
+        <p id="oc-mensaje-vacio">Haz clic aquí o arrastra el archivo para leer la pestaña OC ABIERTAS.</p>
+      </div>
+    </section>
+
+    <div id="oc-contenido" hidden>
+      <section class="card oc-filtros">
+        <div class="oc-filtros-fila oc-filtros-fila-origen">
+          <div class="oc-origen-filtros" role="group" aria-label="Filtrar por origen del proveedor">
+            <button type="button" class="oc-origen-btn oc-extranjero" id="oc-proveedor-extranjero"
+                    aria-pressed="false">
+              <span class="oc-origen-icon" data-ico="mundo" aria-hidden="true"></span>
+              <span>Proveedor extranjero</span>
+            </button>
+            <button type="button" class="oc-origen-btn oc-nacional" id="oc-proveedor-nacional"
+                    aria-pressed="false">
+              <span class="oc-origen-icon" data-ico="ubicacion" aria-hidden="true"></span>
+              <span>Proveedor nacional</span>
+            </button>
+          </div>
+        </div>
+        <div class="oc-filtros-fila oc-filtros-fila-busqueda">
+          <div class="campo">
+            <label for="oc-buscar">Buscar proveedor o N° OC</label>
+            <input id="oc-buscar" type="search" placeholder="Proveedor o número de OC" autocomplete="off">
+          </div>
+          <div class="campo">
+            <label for="oc-mes">Mes de emisión</label>
+            <select id="oc-mes"><option value="">Todos los meses</option></select>
+          </div>
+          <button type="button" class="btn" id="oc-limpiar" data-ico="refrescar">Limpiar filtros</button>
+        </div>
+      </section>
+
+      <section class="oc-rangos" id="oc-rangos" aria-label="Cantidad de OC por antigüedad"></section>
+      <section class="kpis" id="oc-kpis" aria-label="Indicadores de OC ABIERTAS"></section>
+
+      <section class="card oc-conclusiones-card">
+        <div class="card-cab" data-ico="foco"><h3>Conclusiones automáticas</h3><small>Se actualizan con los filtros</small></div>
+        <ul class="conclusiones" id="oc-conclusiones"></ul>
+      </section>
+
+      <section class="card oc-tabla-card">
+        <div class="tabla-barra">
+          <h3 data-ico="tabla">Detalle de OC ABIERTAS</h3>
+          <small id="oc-tabla-resumen"></small>
+        </div>
+        <div class="tabla-scroll">
+          <table class="datos" id="oc-tabla">
+            <thead><tr><th>N° OC</th><th>Fecha OC</th><th>Antigüedad</th><th>Proveedor</th><th>RUT</th><th class="num">Líneas</th><th>Detalle por línea</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="pie"><b>BO Packaging</b> · Motor de decisiones · Boris Pinilla 2026</footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/comun.js"></script>
+  <script src="js/clusters.js"></script>
+  <script src="js/oc-abiertas.js"></script>
+</body>
+</html>

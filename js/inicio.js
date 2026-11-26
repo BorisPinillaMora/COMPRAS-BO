@@ -13,6 +13,10 @@
   let todos = [];
 
   document.addEventListener('DOMContentLoaded', () => {
+    const videoPortada = document.querySelector('.hero-inicio-video');
+    if (videoPortada && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      videoPortada.play().catch(error => console.warn('No se pudo reproducir el video de portada:', error));
+    }
     $('#btn-borrar').addEventListener('click', () => {
       if (!confirm('¿Borrar los datos guardados en este navegador? (El Excel no se modifica)')) return;
       BO.borrarDatos(); BO.pintarInfoArchivo(); dibujar();
@@ -22,6 +26,7 @@
       if (!tr) return;
       const it = todos.find(x => x.id === tr.dataset.id);
       if (!it) return;
+      if (it.esCluster) { BO.clusters.abrirDetalle(it); return; }
       if (e.target.closest('[data-agregar]')) { BO.lista.agregar(it, it.sugerido || 1); return; }
       BO.abrirDetalle(it);
     });
@@ -49,6 +54,10 @@
     if (modalCarga.open) modalCarga.close();
     dibujar();
   });
+  window.addEventListener('storage', e => {
+    if (e.key === CFG.claveClusters) dibujar();
+  });
+  window.addEventListener('pageshow', e => { if (e.persisted) dibujar(); });
 
   function dibujar() {
     const d = BO.obtenerDatos();
@@ -56,15 +65,22 @@
     $('#resumen').hidden = !hay;
     if (!hay) return;
 
-    todos = Object.values(d.modulos).flatMap(m => m.items || []);
-    dibujarTarjetas(d);
+    const vista = BO.clusters.aplicar(d);
+    const vistos = new Set();
+    todos = Object.values(vista.modulos).flatMap(m => m.items || []).filter(it => {
+      if (!it.esCluster) return true;
+      if (vistos.has(it.clusterId)) return false;
+      vistos.add(it.clusterId);
+      return true;
+    });
+    dibujarTarjetas(vista);
     dibujarUrgencias();
     dibujarColumnas(d);
   }
 
   /* ------------------ Tarjetas de cada módulo ------------------ */
   function dibujarTarjetas(d) {
-    $('#tarjetas-modulos').innerHTML = Object.entries(CFG.modulos).map(([id, cfg]) => {
+    const tarjetas = Object.entries(CFG.modulos).map(([id, cfg]) => {
       const m = d.modulos[id];
       if (!m || !m.ok) {
         return `<a class="tarjeta-modulo error" href="${cfg.pagina}">
@@ -98,6 +114,26 @@
           </div>
         </a>`;
     }).join('');
+    const ocs = d.ocAbiertas;
+    const itemsOC = ocs && ocs.ok ? ocs.items || [] : [];
+    const proveedores = new Set(itemsOC.flatMap(it => (it.proveedores || []).map(p => p.clave))).size;
+    const descripcion = !ocs
+        ? 'Vuelve a cargar el Excel para leer la pestaña OC ABIERTAS.'
+        : ocs.ok ? 'Revisa la antigüedad y el detalle por orden de compra.'
+          : ocs.error;
+    const tarjetaOC = `
+        <a id="tarjeta-oc-abiertas" class="tarjeta-modulo${ocs && ocs.ok ? '' : ' error'}" href="oc-abiertas.html">
+          <div class="tm-cab">
+            <div class="tm-ico">${BO.icono('camion')}</div>
+            <div><h3>OC ABIERTAS</h3><p>${BO.esc(descripcion)}</p></div>
+          </div>
+          <div class="tm-numeros">
+            <div><b>${BO.n(itemsOC.length)}</b><small>OC abiertas</small></div>
+            <div><b>${BO.n(proveedores)}</b><small>Proveedores</small></div>
+          </div>
+          <div class="tm-pie"><span>Seguimiento de órdenes</span><span class="tm-ir">Abrir ${BO.icono('arriba', 'girar')}</span></div>
+        </a>`;
+    $('#tarjetas-modulos').innerHTML = tarjetas + tarjetaOC;
   }
 
   /* ------------------ Urgencias de todas las hojas ------------------ */
@@ -109,16 +145,16 @@
       .slice(0, 25);
 
     $('#urgencias tbody').innerHTML = urg.length ? urg.map(it => `
-      <tr data-id="${it.id}" style="--c:${BO.DECISIONES[it.decision].color}">
+      <tr data-id="${it.id}" class="${it.esCluster ? 'fila-cluster' : ''}" style="--c:${BO.DECISIONES[it.decision].color}">
         <td data-label="Módulo"><span class="etq-mod">${BO.esc(CFG.modulos[it.modulo].titulo)}</span></td>
         <td data-label="Código">${BO.esc(it.codigo)}</td>
-        <td class="desc" data-label="Descripción"><b>${BO.esc(it.descripcion)}</b></td>
+        <td class="desc" data-label="Descripción"><b>${BO.esc(it.descripcion)}</b>${it.esCluster ? '<small>Cluster · ' + it.clusterMiembros.length + ' código(s)</small>' : ''}</td>
         <td data-label="Proveedor">${BO.esc(it.proveedor)}</td>
         <td class="num" data-label="Stock"${it.stockHomologado !== undefined ? ` data-tip="Stock propio: ${BO.n(it.stock)}. Stock homologado usado para la decisión: ${BO.n(it.stockHomologado)}."` : ''}>${BO.n(it.stock)}</td>
         <td class="num" data-label="Sugerido"><span class="sug si">${BO.n(it.sugerido)}</span></td>
         <td class="num" data-label="$ Sugerido">${it.valorSugerido ? BO.clp(it.valorSugerido) : '–'}</td>
         <td data-label="Decisión">${BO.badge(it.decision)}</td>
-        <td class="accion" data-label="Acción"><button class="btn-mas" data-agregar data-tip="Agregar a la lista de compra">${BO.icono('mas')}</button></td>
+        <td class="accion" data-label="Acción"><button class="btn-mas" data-agregar data-tip="${it.esCluster ? 'Revisar el cluster y elegir el código para agregar el sugerido' : 'Agregar a la lista de compra'}">${BO.icono('mas')}</button></td>
       </tr>`).join('')
       : '<tr><td colspan="9" class="vacio-celda">Sin compras urgentes. ¡Todo en orden!</td></tr>';
   }

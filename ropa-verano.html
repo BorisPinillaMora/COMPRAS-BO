@@ -33,8 +33,9 @@
         <a href="index.html" data-ico="inicio">Inicio</a>
         <a href="bmat.html" data-ico="capas">Bodega de materias primas</a>
         <a href="panol.html" data-ico="llave">PAÑOL</a>
-        <a href="ropa-verano.html" class="activo" data-ico="polera">ROPA</a>
+        <a href="ropa.html" class="activo" data-ico="polera">ROPA</a>
         <a href="zapatos.html" data-ico="zapato">Zapatos</a>
+        <a href="oc-abiertas.html" data-ico="camion">OC ABIERTAS</a>
       </nav>
       <div class="barra-acciones">
         <button type="button" class="btn claro btn-lista" data-accion="abrir-lista" data-ico="carro"
@@ -46,6 +47,7 @@
             <div class="info-archivo" id="bo-info-archivo"></div>
             <button type="button" class="btn claro" id="bo-btn-cambiar-carpeta">Cambiar carpeta</button>
             <button type="button" class="btn claro" data-accion="cargar" data-ico="refrescar">Actualizar Datos</button>
+            <a href="clusters.html" class="btn claro" data-ico="capas">Crear cluster</a>
           </div>
         </div>
       </div>
@@ -59,10 +61,11 @@
       <div class="hero-ico" data-ico="polera"></div>
       <div class="hero-txt">
         <small>Abastecimiento · Decisión de compra</small>
-        <h1>Ropa de verano</h1>
-        <p>Ropa corporativa de verano por prenda y talla. Stock vs. máximo y despachos pendientes.</p>
+        <h1 id="titulo-vista">ROPA DE VERANO</h1>
+        <p id="descripcion-vista">Ropa corporativa por prenda y talla. Stock vs. máximo y despachos pendientes.</p>
       </div>
       <div class="hero-acciones">
+        <a class="btn claro" href="ropa.html" data-ico="polera">Cambiar temporada</a>
         <button type="button" class="btn primario btn-sugeridos-principal" id="btn-sugeridos" data-ico="carro"
                 data-tip="Agrega a la lista todos los artículos de la vista actual que tienen compra sugerida">Agregar sugeridos</button>
       </div>
@@ -118,12 +121,21 @@
       <section class="chips" id="chips-decision"></section>
       <div class="filtros-activos" id="filtros-activos"></div>
 
+      <!-- Tabla de detalle -->
+      <section class="card" id="tabla-card">
+        <div class="tabla-barra">
+          <h3 data-ico="tabla">Detalle de artículos</h3>
+          <small id="tabla-resumen"></small>
+          <button class="btn claro chico" id="btn-exportar-tabla" type="button" data-ico="bajar">Exportar a Excel</button>
+        </div>
+        <div class="tabla-scroll">
+          <table class="datos" id="tabla"><thead></thead><tbody></tbody></table>
+        </div>
+        <div class="paginacion" id="paginacion"></div>
+      </section>
+
       <!-- Gráficos (clic en cualquier barra o sector para filtrar) -->
       <section class="graficos" id="graficos">
-        <article class="card">
-          <div class="card-cab" data-ico="grafico"><h3>Estado de compra</h3><small>Clic para filtrar</small></div>
-          <div class="lienzo"><canvas id="g-decision"></canvas></div>
-        </article>
         <article class="card">
           <div class="card-cab" data-ico="camion"><h3 id="t-proveedor">Top proveedores</h3><small>Clic para filtrar</small></div>
           <div class="lienzo"><canvas id="g-proveedor"></canvas></div>
@@ -142,18 +154,6 @@
         </article>
       </section>
 
-      <!-- Tabla de detalle -->
-      <section class="card" id="tabla-card">
-        <div class="tabla-barra">
-          <h3 data-ico="tabla">Detalle de artículos</h3>
-          <small id="tabla-resumen"></small>
-          <button class="btn claro chico" id="btn-exportar-tabla" type="button" data-ico="bajar">Exportar a Excel</button>
-        </div>
-        <div class="tabla-scroll">
-          <table class="datos" id="tabla"><thead></thead><tbody></tbody></table>
-        </div>
-        <div class="paginacion" id="paginacion"></div>
-      </section>
     </div>
   </main>
 
@@ -165,6 +165,7 @@
   <!-- ============ SCRIPTS (el orden importa) ============ -->
   <script src="js/config.js"></script>
   <script src="js/comun.js"></script>
+  <script src="js/clusters.js"></script>
   <script src="js/modulo.js"></script>
 </body>
 </html>

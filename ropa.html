@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ropa | Compras BO Packaging</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <header class="barra-top">
+    <div class="contenedor">
+      <a class="logo" href="index.html" aria-label="Inicio"><img src="assets/bo-packaging-logo.png" alt=""></a>
+      <nav class="nav">
+        <a href="index.html" data-ico="inicio">Inicio</a>
+        <a href="bmat.html" data-ico="capas">Bodega Materias Primas</a>
+        <a href="panol.html" data-ico="llave">PAÑOL</a>
+        <a href="ropa.html" class="activo" data-ico="polera" aria-current="page">ROPA</a>
+        <a href="zapatos.html" data-ico="zapato">Zapatos</a>
+        <a href="oc-abiertas.html" data-ico="camion">OC ABIERTAS</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="contenedor">
+    <section class="hero">
+      <div class="hero-ico" data-ico="polera"></div>
+      <div class="hero-txt">
+        <small>Abastecimiento · Ropa corporativa</small>
+        <h1>Selecciona una temporada</h1>
+        <p>Elige la vista de ropa que quieres consultar.</p>
+      </div>
+    </section>
+
+    <section class="tarjetas-modulos temporadas-opciones" aria-label="Temporadas de ropa">
+      <a class="tarjeta-modulo tarjeta-temporada" href="ropa-verano.html?temporada=VERANO">
+        <div class="tm-cab">
+          <div class="tm-ico" data-ico="sol"></div>
+          <div><h3>ROPA DE VERANO</h3><p>Prendas de verano y transversales.</p></div>
+        </div>
+        <div class="tm-pie"><span>Stock, despachos y sugerencias de compra</span><span class="tm-ir">Abrir <span data-ico="arriba"></span></span></div>
+      </a>
+      <a class="tarjeta-modulo tarjeta-temporada opcion-invierno" href="ropa-verano.html?temporada=INVIERNO">
+        <div class="tm-cab">
+          <div class="tm-ico" data-ico="nieve"></div>
+          <div><h3>ROPA DE INVIERNO</h3><p>Prendas de invierno y transversales.</p></div>
+        </div>
+        <div class="tm-pie"><span>Stock, despachos y sugerencias de compra</span><span class="tm-ir">Abrir <span data-ico="arriba"></span></span></div>
+      </a>
+    </section>
+  </main>
+
+  <footer class="pie"><b>BO Packaging</b> · Motor de decisiones · Boris Pinilla 2026</footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/comun.js"></script>
+</body>
+</html>

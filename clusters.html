@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crear cluster | Compras BO Packaging</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script>window.XLSX || document.write('<script src="js/vendor/xlsx.full.min.js"><\/script>');</script>
+</head>
+<body data-modulo="clusters">
+  <header class="barra-top">
+    <div class="contenedor">
+      <a class="logo" href="index.html" aria-label="Inicio"><img src="assets/bo-packaging-logo.png" alt=""></a>
+      <nav class="nav">
+        <a href="index.html" data-ico="inicio">Inicio</a>
+        <a href="bmat.html" data-ico="capas">Bodega Materias Primas</a>
+        <a href="panol.html" data-ico="llave">PAÑOL</a>
+        <a href="ropa.html" data-ico="polera">ROPA</a>
+        <a href="zapatos.html" data-ico="zapato">Zapatos</a>
+        <a href="oc-abiertas.html" data-ico="camion">OC ABIERTAS</a>
+      </nav>
+      <div class="barra-acciones">
+        <button type="button" class="btn claro btn-lista" data-accion="abrir-lista" data-ico="carro"
+                data-tip="Tu lista de compra (pre-OC) agrupada por proveedor">Lista
+          <span class="contador" data-contador-lista>0</span></button>
+        <div class="menu-datos">
+          <button type="button" class="btn claro" id="bo-btn-menu-datos" aria-expanded="false" aria-controls="bo-menu-datos">Datos</button>
+          <div class="menu-datos-panel" id="bo-menu-datos" hidden>
+            <div class="info-archivo" id="bo-info-archivo"></div>
+            <button type="button" class="btn claro" id="bo-btn-cambiar-carpeta">Cambiar carpeta</button>
+            <button type="button" class="btn claro" data-accion="cargar" data-ico="refrescar">Actualizar Datos</button>
+            <a href="clusters.html" class="btn claro" data-ico="capas" aria-current="page">Crear cluster</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="contenedor">
+    <section class="hero">
+      <div class="hero-ico" data-ico="capas"></div>
+      <div class="hero-txt">
+        <small>Abastecimiento · Inventario consolidado</small>
+        <h1>Crear y administrar clusters</h1>
+        <p>Selecciona códigos para consolidar su inventario bajo un mínimo común. Los cambios se comparten entre todos los módulos de este navegador.</p>
+      </div>
+    </section>
+
+    <section class="card cluster-editor">
+      <div class="card-cab" data-ico="capas"><h3 id="cluster-form-titulo">Nuevo cluster</h3></div>
+      <form id="cluster-form">
+        <div class="cluster-campos">
+          <div class="campo">
+            <label for="cluster-nombre">Nombre del cluster</label>
+            <input id="cluster-nombre" type="text" maxlength="80" required placeholder="Ej.: Film transparente">
+          </div>
+          <div class="campo">
+            <label for="cluster-minimo">Mínimo consolidado</label>
+            <input id="cluster-minimo" type="number" min="1" step="1" required>
+          </div>
+          <div class="cluster-seleccionados" aria-live="polite">
+            <b id="cluster-cantidad">0 códigos seleccionados</b>
+            <small>Haz clic en los códigos para seleccionarlos; también puedes compartir códigos de otros clusters.</small>
+          </div>
+        </div>
+        <div class="cluster-form-acciones">
+          <button class="btn primario" id="cluster-guardar" type="submit" data-ico="check">Crear cluster</button>
+          <button class="btn claro" id="cluster-cancelar" type="button" hidden>Cancelar edición</button>
+        </div>
+        <p class="cluster-mensaje" id="cluster-mensaje" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="card cluster-catalogo-card">
+      <div class="tabla-barra">
+        <h3 data-ico="buscar">Códigos disponibles</h3>
+        <input id="cluster-buscar" type="search" placeholder="Buscar por código, descripción o módulo" autocomplete="off">
+      </div>
+      <div class="tabla-scroll">
+        <table class="datos">
+          <thead><tr><th>Módulo</th><th>Código</th><th>Descripción</th><th class="num">Stock</th><th class="num">Mínimo actual</th></tr></thead>
+          <tbody id="cluster-catalogo"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-cab" data-ico="tabla"><h3>Clusters existentes</h3></div>
+      <div class="cluster-lista" id="cluster-lista"></div>
+    </section>
+  </main>
+
+  <footer class="pie"><b>BO Packaging</b> · Motor de decisiones · Boris Pinilla 2026</footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/comun.js"></script>
+  <script src="js/clusters.js"></script>
+  <script src="js/clusters-page.js"></script>
+</body>
+</html>

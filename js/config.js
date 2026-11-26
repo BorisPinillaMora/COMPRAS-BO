@@ -19,6 +19,7 @@ window.BO_CONFIG = {
   /* Nombre que se guarda en el navegador (no cambiar salvo que quieras "reiniciar") */
   claveDatos: 'boCompras.datos.v1',
   claveLista: 'boCompras.lista.v1',
+  claveClusters: 'boCompras.clusters.v1',
 
   /* Filas por página en las tablas */
   filasPorPagina: 50,
@@ -50,6 +51,17 @@ window.BO_CONFIG = {
       pendiente:   ['CANTIDAD PENDIENTE'],
       eta:         ['ETA'],
       estatus:     ['ESTATUS']
+    }
+  },
+
+  /* Órdenes abiertas agrupadas por número de OC */
+  hojaOCAbiertas: {
+    hojas: ['OC ABIERTAS'],
+    columnas: {
+      oc: 'B',
+      fecha: 'C',
+      rut: 'F',
+      proveedor: 'G'
     }
   },
 
@@ -130,9 +142,9 @@ window.BO_CONFIG = {
 
     /* ======================== ROPA DE VERANO ======================== */
     ropa: {
-      titulo: 'Ropa de verano',
+      titulo: 'Ropa',
       subtitulo: 'Poleras, pantalones, polerones, cotonas y más',
-      pagina: 'ropa-verano.html',
+      pagina: 'ropa.html',
       icono: 'polera',
       hojas: ['ROPA VERANO', 'ROPA DE VERANO'],
       filaEncabezado: 2,
@@ -146,7 +158,8 @@ window.BO_CONFIG = {
         proveedor:   'G',
         faltante:    'H',
         pendiente:   'I',   /* DESPACHO */
-        oc:          'J'
+        oc:          'J',
+        temporada:   'K'    /* ESTADO: VERANO, INVIERNO o TRANSVERSAL */
       },
       tabla: ['codigo', 'descripcion', 'categoria', 'talla', 'proveedor', 'valor',
               'stock', 'maximo', 'pendiente', 'oc', 'sugerido', 'valorSugerido', 'decision'],
@@ -172,7 +185,8 @@ window.BO_CONFIG = {
         valor:       'H',
         proveedor:   'I',
         pendiente:   'J',
-        oc:          'K'
+        oc:          'K',
+        subcategoria: 'L'    /* STANDAR, ANTIESTATICO o ESPECIAL */
       },
       tabla: ['codigo', 'descripcion', 'categoria', 'talla', 'proveedor', 'valor',
               'stock', 'minimo', 'pendiente', 'oc', 'sugerido', 'valorSugerido', 'decision'],

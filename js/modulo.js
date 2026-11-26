@@ -13,7 +13,7 @@
   const CFG = window.BO_CONFIG;
   const $ = sel => document.querySelector(sel);
 
-  let ID, CONF, MOD, ITEMS = [];
+  let ID, CONF, MOD, ITEMS = [], TEMPORADA = '', SUBCATEGORIA = '';
   const graficos = {};
 
   /* Estado de los filtros */
@@ -51,17 +51,45 @@
     };
   }
 
+  function camposTabla(cols) {
+    const campos = CONF.tabla.filter(c => cols[c]);
+    if (ITEMS.some(it => it.esCluster) && !campos.includes('minimo')) {
+      campos.splice(campos.indexOf('stock') + 1, 0, 'minimo');
+    }
+    return campos;
+  }
+
   /* =================================================================
      INICIO
      ================================================================= */
   document.addEventListener('DOMContentLoaded', () => {
     ID = document.body.dataset.modulo;
     CONF = CFG.modulos[ID];
+    if (ID === 'ropa') {
+      const solicitada = BO.normalizar(new URLSearchParams(window.location.search).get('temporada')).toUpperCase();
+      TEMPORADA = ['VERANO', 'INVIERNO'].includes(solicitada) ? solicitada : 'VERANO';
+      const etiqueta = TEMPORADA === 'VERANO' ? 'verano' : 'invierno';
+      $('#titulo-vista').textContent = `ROPA DE ${TEMPORADA}`;
+      $('#descripcion-vista').textContent = `Ropa corporativa de ${etiqueta} y prendas transversales por prenda y talla. Stock vs. máximo y despachos pendientes.`;
+      document.title = `Ropa de ${etiqueta} | Compras BO Packaging`;
+    } else if (ID === 'zapatos') {
+      const solicitada = BO.normalizar(new URLSearchParams(window.location.search).get('subcategoria'));
+      SUBCATEGORIA = ['STANDAR', 'ANTIESTATICO', 'ESPECIAL'].includes(solicitada) ? solicitada : 'STANDAR';
+      $('#titulo-vista').textContent = `ZAPATOS ${SUBCATEGORIA}`;
+      $('#descripcion-vista').textContent = `Calzado ${SUBCATEGORIA.toLowerCase()} por modelo y talla. Stock vs. mínimo y OC pendientes.`;
+      document.title = `Zapatos ${SUBCATEGORIA.toLowerCase()} | Compras BO Packaging`;
+    }
     if ($('#f-marca').type === 'checkbox') F.marca = 'NO';
     conectarEventos();
     cargar();
   });
   document.addEventListener('bo:datos', () => { F.pagina = 1; cargar(); });
+  window.addEventListener('storage', e => {
+    if (e.key === CFG.claveClusters) { F.pagina = 1; cargar(); }
+  });
+  window.addEventListener('pageshow', e => {
+    if (e.persisted) { F.pagina = 1; cargar(); }
+  });
 
   function cargar() {
     const datos = BO.obtenerDatos();
@@ -75,7 +103,34 @@
         'Carga tu archivo COMPRAS FLEXIBLE para ver este módulo.';
       return;
     }
-    ITEMS = MOD.items;
+    let datosVista = datos;
+    if (ID === 'ropa') {
+      const indiceEstadoOriginal = (MOD.columnasOriginales || [])
+        .findIndex(col => BO.normalizar(col.titulo) === 'ESTADO');
+      const itemsTemporada = MOD.items.filter(it => {
+        const estado = BO.normalizar(it.temporada || (indiceEstadoOriginal >= 0 ? (it.orig || [])[indiceEstadoOriginal] : ''));
+        return estado === TEMPORADA || estado === 'TRANSVERSAL';
+      });
+      datosVista = Object.assign({}, datos, {
+        modulos: Object.assign({}, datos.modulos, {
+          [ID]: Object.assign({}, MOD, { items: itemsTemporada })
+        })
+      });
+    } else if (ID === 'zapatos') {
+      const indiceSubcategoriaOriginal = (MOD.columnasOriginales || [])
+        .findIndex(col => col.letra === CONF.columnas.subcategoria);
+      const itemsSubcategoria = MOD.items.filter(it => {
+        const valor = it.subcategoria || it.temporada ||
+          (indiceSubcategoriaOriginal >= 0 ? (it.orig || [])[indiceSubcategoriaOriginal] : '');
+        return BO.normalizar(valor).includes(SUBCATEGORIA);
+      });
+      datosVista = Object.assign({}, datos, {
+        modulos: Object.assign({}, datos.modulos, {
+          [ID]: Object.assign({}, MOD, { items: itemsSubcategoria })
+        })
+      });
+    }
+    ITEMS = BO.clusters.aplicarModulo(datosVista, ID);
     llenarSelects();
     dibujar();
   }
@@ -94,8 +149,10 @@
     const filtroEstado = $('#f-estado');
     if (filtroEstado) filtroEstado.addEventListener('change', e => { F.estado = e.target.value; F.pagina = 1; dibujar(); });
     const filtroAlcanceBajo30 = $('#f-alcance-bajo-30');
-    if (filtroAlcanceBajo30) filtroAlcanceBajo30.addEventListener('change', e => {
-      F.alcanceBajo30 = e.target.checked; F.pagina = 1; dibujar();
+    if (filtroAlcanceBajo30) filtroAlcanceBajo30.addEventListener('click', () => {
+      F.alcanceBajo30 = !F.alcanceBajo30;
+      filtroAlcanceBajo30.setAttribute('aria-pressed', String(F.alcanceBajo30));
+      F.pagina = 1; dibujar();
     });
     const filtroMarca = $('#f-marca');
     filtroMarca.addEventListener('change', e => {
@@ -135,6 +192,10 @@
       if (!tr) return;
       const it = ITEMS.find(x => x.id === tr.dataset.id);
       if (!it) return;
+      if (it.esCluster) {
+        BO.clusters.abrirDetalle(it);
+        return;
+      }
       if (e.target.closest('[data-agregar]')) {
         e.stopPropagation();
         BO.lista.agregar(it, it.sugerido || 1);
@@ -156,7 +217,8 @@
       const c = e.target.closest('[data-id]');
       if (!c) return;
       const it = ITEMS.find(x => x.id === c.dataset.id);
-      if (it) BO.abrirDetalle(it);
+      if (it && it.esCluster) BO.clusters.abrirDetalle(it);
+      else if (it) BO.abrirDetalle(it);
     });
   }
 
@@ -175,7 +237,7 @@
     F.decisiones.clear();
     $('#f-texto').value = ''; $('#f-categoria').value = ''; $('#f-proveedor').value = '';
     if ($('#f-estado')) $('#f-estado').value = '';
-    if ($('#f-alcance-bajo-30')) $('#f-alcance-bajo-30').checked = false;
+    if ($('#f-alcance-bajo-30')) $('#f-alcance-bajo-30').setAttribute('aria-pressed', 'false');
     if (filtroMarca.type === 'checkbox') {
       filtroMarca.checked = false;
       $('#valor-marca').textContent = 'NO';
@@ -186,7 +248,8 @@
   }
 
   function llenarSelects() {
-    const opciones = (campo) => [...new Set(ITEMS.map(i => i[campo]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+    const itemsFiltro = ITEMS.flatMap(it => it.esCluster ? it.clusterMiembrosLocales : [it]);
+    const opciones = campo => [...new Set(itemsFiltro.map(i => i[campo]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
     const llenar = (sel, lista, todos) => {
       const actual = sel.value;
       sel.innerHTML = '<option value="">' + todos + '</option>' +
@@ -226,16 +289,20 @@
   /** Aplica todos los filtros. "sinDecision" se usa para contar los chips. */
   function filtrar(sinDecision) {
     return ITEMS.filter(it => {
-      if (F.soloVisibles && it.oculta) return false;
-      if (F.categoria && it.categoria !== F.categoria) return false;
-      if (F.proveedor && it.proveedor !== F.proveedor) return false;
-      if (F.estado && it.estado !== F.estado) return false;
-      if (F.marca && it.marca !== F.marca) return false;
+      const miembros = it.esCluster ? it.clusterMiembrosLocales : [it];
+      if (F.soloVisibles && (it.esCluster ? !miembros.some(m => !m.oculta) : it.oculta)) return false;
+      if (F.categoria && !miembros.some(m => m.categoria === F.categoria)) return false;
+      if (F.proveedor && !miembros.some(m => m.proveedor === F.proveedor)) return false;
+      if (F.estado && !miembros.some(m => m.estado === F.estado)) return false;
+      if (F.marca && !miembros.some(m => m.marca === F.marca)) return false;
       if (F.alcanceBajo30 && !(typeof it.alcance === 'number' && it.alcance < 30)) return false;
       if (F.tramo && tramoDe(it.alcance) !== F.tramo) return false;
       if (!sinDecision && F.decisiones.size && !F.decisiones.has(it.decision)) return false;
       if (F.texto) {
-        const t = BO.normalizar(it.codigos.join(' ') + ' ' + it.descripcion + ' ' + it.proveedor + ' ' + it.oc + ' ' + it.categoria);
+        const clusterTexto = it.esCluster
+          ? it.clusterMiembros.map(m => [m.codigos.join(' '), m.descripcion, m.proveedor, m.categoria].join(' ')).join(' ')
+          : '';
+        const t = BO.normalizar([it.codigos.join(' '), it.descripcion, it.proveedor, it.oc, it.categoria, clusterTexto].join(' '));
         if (!F.texto.split(' ').every(p => t.includes(p))) return false;
       }
       return true;
@@ -263,16 +330,16 @@
     const unidSug = vis.reduce((s, i) => s + (i.sugerido || 0), 0);
     const valInv = vis.reduce((s, i) => s + (i.valorStock || 0), 0);
 
-    const tarjeta = (ico, titulo, valor, detalle, color, filtro, ayuda) => `
-      <article class="kpi ${filtro && F.decisiones.has(filtro) ? 'activo' : ''}" style="--c:${color}"
+    const tarjeta = (ico, titulo, valor, detalle, color, filtro, ayuda, clase = '') => `
+      <article class="kpi ${clase} ${filtro && F.decisiones.has(filtro) ? 'activo' : ''}" style="--c:${color}"
         ${filtro ? 'data-filtro-decision="' + filtro + '" role="button" tabindex="0"' : ''} data-tip="${BO.esc(ayuda)}">
         <div class="kpi-ico">${BO.icono(ico)}</div>
-        <div><small>${titulo}</small><b>${valor}</b><span>${detalle}</span></div>
+        <div class="kpi-info"><small>${titulo}</small><b>${valor}</b><span>${detalle}</span></div>
       </article>`;
 
     const D = BO.DECISIONES;
     $('#kpis').innerHTML =
-      tarjeta('caja', 'Artículos en vista', BO.n(vis.length), 'de ' + BO.n(ITEMS.length) + ' en la hoja', 'var(--bo-primario)', null, 'Cantidad de artículos que cumplen los filtros actuales.') +
+      tarjeta('caja', 'Artículos en vista', BO.n(vis.length), 'de ' + BO.n(ITEMS.length) + ' en la hoja', 'var(--bo-primario)', null, 'Cantidad de artículos que cumplen los filtros actuales.', 'kpi-principal') +
       tarjeta('alerta', 'Stock 0', BO.n(cuenta('stock0')), 'urgentes', D.stock0.color, 'stock0', D.stock0.ayuda + '<br><b>Clic para filtrar.</b>') +
       tarjeta('carro', 'Comprar', BO.n(cuenta('comprar')), CONF.tipo === 'ropa' ? 'bajo el máximo' : 'bajo el mínimo', D.comprar.color, 'comprar', D.comprar.ayuda + '<br><b>Clic para filtrar.</b>') +
       tarjeta('camion', 'En tránsito', BO.n(cuenta('transito')), 'cubiertos por OC', D.transito.color, 'transito', D.transito.ayuda + '<br><b>Clic para filtrar.</b>') +
@@ -337,24 +404,7 @@
     const primario = css.getPropertyValue('--bo-primario').trim();
     const acento = css.getPropertyValue('--bo-primario').trim();
 
-    /* 1. Dona por decisión */
-    const decs = BO.ORDEN_DECISION.filter(d => vis.some(i => i.decision === d));
-    crearOActualizar('g-decision', {
-      type: 'doughnut',
-      data: {
-        labels: decs.map(d => BO.DECISIONES[d].txt),
-        datasets: [{ data: decs.map(d => vis.filter(i => i.decision === d).length),
-          backgroundColor: decs.map(d => BO.DECISIONES[d].color), borderWidth: 3, borderColor: '#fff', hoverOffset: 14 }]
-      },
-      options: {
-        cutout: '64%', maintainAspectRatio: false,
-        plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8 } } },
-        onClick: (e, el) => { if (el.length) alternarDecision(decs[el[0].index]); },
-        onHover: (e, el) => { e.native.target.style.cursor = el.length ? 'pointer' : 'default'; }
-      }
-    });
-
-    /* 2. Proveedores con más artículos para comprar */
+    /* Proveedores con más artículos para comprar */
     const urg = vis.filter(i => i.decision === 'stock0' || i.decision === 'comprar');
     const porProv = {};
     urg.forEach(i => {
@@ -457,7 +507,7 @@
     const tallas = [...new Set(vis.map(i => i.talla || '–'))].sort(ordenTalla);
     const cats = [...new Set(vis.map(i => i.categoria))];
     if (!vis.length) { $('#mapa-calor').innerHTML = '<p class="vacio-celda">Sin datos con los filtros actuales.</p>'; return; }
-    const piso = i => CONF.tipo === 'ropa' ? i.maximo : i.minimo;
+    const piso = i => i.esCluster ? i.minimo : CONF.tipo === 'ropa' ? i.maximo : i.minimo;
 
     let html = '<table class="mapa"><thead><tr><th>' + (CONF.tipo === 'ropa' ? 'Prenda' : 'Modelo') + ' / Talla</th>' +
       tallas.map(t => '<th>' + BO.esc(t) + '</th>').join('') + '</tr></thead><tbody>';
@@ -467,7 +517,8 @@
         const it = vis.find(i => i.categoria === c && (i.talla || '–') === t);
         if (!it) { html += '<td class="nada"></td>'; return; }
         const x = BO.DECISIONES[it.decision];
-        const tip = `<b>${BO.esc(it.descripcion)}</b><br>Stock: ${BO.n(it.stock)} · ${CONF.tipo === 'ropa' ? 'Máx' : 'Mín'}: ${BO.n(piso(it))}<br>Pendiente: ${BO.n(it.pendiente)} · Sugerido: ${BO.n(it.sugerido)}<br>${x.txt}`;
+        const pisoNombre = it.esCluster ? 'Mín' : CONF.tipo === 'ropa' ? 'Máx' : 'Mín';
+        const tip = `<b>${BO.esc(it.descripcion)}</b><br>Stock: ${BO.n(it.stock)} · ${pisoNombre}: ${BO.n(piso(it))}<br>Pendiente: ${BO.n(it.pendiente)} · Sugerido: ${BO.n(it.sugerido)}<br>${x.txt}`;
         html += `<td data-id="${it.id}" data-talla="${BO.esc(t)}" style="--c:${x.color}" data-tip="${BO.esc(tip)}"><b>${BO.n(it.stock)}</b><small>/${BO.n(piso(it))}</small></td>`;
       });
       html += '</tr>';
@@ -529,7 +580,7 @@
 
   function dibujarTabla(vis) {
     const cols = definicionColumnas();
-    const campos = CONF.tabla.filter(c => cols[c]);
+    const campos = camposTabla(cols);
     const ordenados = ordenarItems(vis);
     const { campo, dir } = F.orden;
 
@@ -547,8 +598,12 @@
 
     $('#tabla tbody').innerHTML = pagina.length ? pagina.map(it => {
       const celdas = campos.map(c => celda(it, c, cols[c].tipo, cols[c].t)).join('');
-      return `<tr data-id="${it.id}" class="${it.oculta ? 'fila-oculta' : ''}" style="--c:${BO.DECISIONES[it.decision].color}">${celdas}
-        <td class="accion" data-label="Acción"><button class="btn-mas" data-agregar data-tip="Agregar a la lista de compra (${BO.n(it.sugerido || 1)} un.)">${BO.icono('mas')}</button></td></tr>`;
+      const clases = [it.oculta ? 'fila-oculta' : '', it.esCluster ? 'fila-cluster' : ''].filter(Boolean).join(' ');
+      const tipAgregar = it.esCluster
+        ? 'Revisar el cluster y agregar el sugerido a un código miembro'
+        : 'Agregar a la lista de compra (' + BO.n(it.sugerido || 1) + ' un.)';
+      return `<tr data-id="${it.id}" class="${clases}" style="--c:${BO.DECISIONES[it.decision].color}">${celdas}
+        <td class="accion" data-label="Acción"><button class="btn-mas" data-agregar data-tip="${tipAgregar}">${BO.icono('mas')}</button></td></tr>`;
     }).join('') : `<tr><td colspan="${campos.length + 1}" class="vacio-celda">No hay artículos con estos filtros.</td></tr>`;
 
     $('#tabla-resumen').textContent = ordenados.length
@@ -578,7 +633,7 @@
     boton.disabled = true;
     try {
       const cols = definicionColumnas();
-      const campos = CONF.tabla.filter(c => cols[c]);
+      const campos = camposTabla(cols);
       const exportCols = campos.flatMap(c => [
         { key: c, header: cols[c].t, tipo: cols[c].tipo },
         ...(c === 'stock' && filas.some(it => it.stockHomologado !== undefined)
@@ -670,7 +725,9 @@
     const v = it[campo];
     const label = ' data-label="' + BO.esc(etiqueta) + '"';
     switch (tipo) {
-      case 'desc': return `<td class="desc"${label}><b>${BO.esc(v)}</b>${it.variantes && it.variantes.length > 1 ? '<small>' + it.variantes.length + ' colores</small>' : ''}</td>`;
+      case 'desc': return `<td class="desc"${label}><b>${BO.esc(v)}</b>${it.esCluster
+        ? '<small>Cluster · ' + it.clusterMiembros.length + ' código(s)</small>'
+        : it.variantes && it.variantes.length > 1 ? '<small>' + it.variantes.length + ' colores</small>' : ''}</td>`;
       case 'prov': return `<td class="prov"${label}>${BO.esc(v)}${it.proveedorDesdeOC ? ' <em data-tip="Proveedor tomado de la OC pendiente">OC</em>' : ''}</td>`;
       case 'clp':  return `<td class="num"${label}>${v ? BO.clp(v) : '–'}</td>`;
       case 'num':  return `<td class="num"${label}>${BO.n(v)}</td>`;

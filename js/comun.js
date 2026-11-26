@@ -137,6 +137,12 @@ window.BO = window.BO || {};
     grafico: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
     filtro:  '<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
     reloj:   '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    rayo:    '<path d="M13 2 3 14h7l-1 8 12-14h-7z"/>',
+    estrella: '<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.8 1-6.1-4.4-4.3 6.1-.9z"/>',
+    sol:     '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>',
+    nieve:   '<path d="M12 2v20M4 6l16 12M4 18 20 6"/><path d="m9 4 3 2 3-2m-6 16 3-2 3 2M4 10l3-1 1-3m8 12 1-3 3-1M4 14l3 1 1 3m8-12 1 3 3 1"/>',
+    mundo:   '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>',
+    ubicacion: '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.5"/>',
     foco:    '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/>',
     archivo: '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/>',
     arriba:  '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>',
@@ -254,7 +260,7 @@ window.BO = window.BO || {};
     return BO.normalizar(desc).replace(/N\s*[°º.]?\s*\d{2}\b/, '').replace(/\s+/g, ' ').trim();
   }
 
-  const CAMPOS_TEXTO = ['codigo', 'descripcion', 'categoria', 'proveedor', 'oc', 'estado', 'decisionExcel', 'marca'];
+  const CAMPOS_TEXTO = ['codigo', 'descripcion', 'categoria', 'proveedor', 'oc', 'estado', 'temporada', 'subcategoria', 'decisionExcel', 'marca'];
 
   function filtrarItemsSinConsumo(items, cfg) {
     if (!cfg.excluirSinConsumo) return items;
@@ -385,7 +391,84 @@ window.BO = window.BO || {};
     return porCodigo;
   }
 
-  /** Procesa el libro completo (las 4 pestañas + OC pendientes) */
+  function fechaISODeOC(valor) {
+    const crear = (anio, mes, dia) => {
+      const fecha = new Date(Date.UTC(anio, mes - 1, dia));
+      if (fecha.getUTCFullYear() !== anio || fecha.getUTCMonth() !== mes - 1 || fecha.getUTCDate() !== dia) return '';
+      return fecha.toISOString().slice(0, 10);
+    };
+    if (valor instanceof Date && Number.isFinite(valor.getTime())) {
+      return crear(valor.getUTCFullYear(), valor.getUTCMonth() + 1, valor.getUTCDate());
+    }
+    if (typeof valor === 'number' && Number.isFinite(valor) && valor > 0 && valor <= 2958465) {
+      const fecha = new Date(Date.UTC(1899, 11, 30) + Math.round(valor * 86400000));
+      return Number.isFinite(fecha.getTime()) ? fecha.toISOString().slice(0, 10) : '';
+    }
+    const texto = BO.txt(valor).split(/\s+/)[0];
+    let m = texto.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
+    if (m) return crear(Number(m[1]), Number(m[2]), Number(m[3]));
+    m = texto.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+    if (m) return crear(Number(m[3]), Number(m[2]), Number(m[1]));
+    return '';
+  }
+
+  /** Lee OC ABIERTAS y agrupa las líneas por número de OC */
+  function procesarOCAbiertas(wb) {
+    const cfg = CFG.hojaOCAbiertas;
+    const hoja = buscarHoja(wb, cfg.hojas);
+    if (!hoja) return { ok: false, error: 'No se encontró la pestaña "OC ABIERTAS" en el Excel.', items: [], columnas: [] };
+
+    const { filas } = leerFilas(hoja.ws);
+    const indices = Object.fromEntries(Object.entries(cfg.columnas).map(([campo, letra]) => [campo, BO.letraAIndice(letra)]));
+    const encabezadoEn = filas.findIndex((filaOriginal, i) => {
+      if (i > 19) return false;
+      const fila = filaOriginal || [];
+      const valor = campo => BO.normalizar(fila[indices[campo]] || '').replace(/[^A-Z0-9]/g, '');
+      return /OC|ORDEN|NUM/.test(valor('oc')) &&
+        /FECHA|FEC/.test(valor('fecha')) &&
+        /RUT/.test(valor('rut')) &&
+        /NOMBRE|PROVEEDOR/.test(valor('proveedor'));
+    });
+    const inicioDatos = encabezadoEn >= 0 ? encabezadoEn + 1 : 0;
+    const maxColumnas = filas.reduce((max, fila) => Math.max(max, (fila || []).length), 0);
+    const encabezados = encabezadoEn >= 0 ? filas[encabezadoEn] : [];
+    const columnas = Array.from({ length: maxColumnas }, (_, i) =>
+      BO.txt(encabezados[i]) || 'Columna ' + BO.indiceALetra(i));
+    const grupos = new Map();
+
+    for (let r = inicioDatos; r < filas.length; r++) {
+      const fila = filas[r] || [];
+      const oc = BO.txt(fila[indices.oc]);
+      if (!oc) continue;
+      const ocNormalizada = BO.normalizar(oc).replace(/\s+/g, '');
+      if (/^(NUMERO|NUM|NRO|NOC|NUMEROOC|NUMOC|ORDENDECOMPRA)$/.test(ocNormalizada)) continue;
+
+      const fecha = fechaISODeOC(fila[indices.fecha]);
+      const rut = BO.txt(fila[indices.rut]);
+      const proveedor = BO.txt(fila[indices.proveedor]);
+      const clave = ocNormalizada || oc;
+      let grupo = grupos.get(clave);
+      if (!grupo) {
+        grupo = { oc, fecha: '', proveedores: [], lineas: [] };
+        grupos.set(clave, grupo);
+      }
+      if (fecha && (!grupo.fecha || fecha < grupo.fecha)) grupo.fecha = fecha;
+      if (rut || proveedor) {
+        const proveedorKey = BO.normalizar(rut + '|' + proveedor);
+        if (!grupo.proveedores.some(p => p.clave === proveedorKey)) {
+          grupo.proveedores.push({ clave: proveedorKey, rut, nombre: proveedor });
+        }
+      }
+      const detalle = columnas.map((titulo, i) => ({ titulo, valor: fila[i] instanceof Date
+        ? fechaISODeOC(fila[i])
+        : BO.txt(fila[i]) })).filter(c => c.valor);
+      if (detalle.length) grupo.lineas.push({ fila: r + 1, detalle });
+    }
+
+    return { ok: true, hoja: hoja.nombre, encabezado: encabezadoEn + 1, columnas, items: [...grupos.values()] };
+  }
+
+  /** Procesa el libro completo (módulos, OC pendientes y OC ABIERTAS) */
   BO.procesarLibro = function (wb, nombreArchivo) {
     const datos = { archivo: nombreArchivo, cargado: new Date().toISOString(), versionHomologos: 1, modulos: {}, ocs: {} };
     const codigos = new Set();
@@ -396,6 +479,7 @@ window.BO = window.BO || {};
     });
 
     datos.ocs = procesarOC(wb, codigos);
+    datos.ocAbiertas = procesarOCAbiertas(wb);
 
     // Si un artículo no tiene proveedor en su hoja, se toma el de su OC pendiente
     Object.values(datos.modulos).forEach(m => m.items.forEach(it => {
@@ -478,7 +562,10 @@ window.BO = window.BO || {};
       BO.guardarDatos(datos);
       const total = Object.values(datos.modulos).reduce((s, m) => s + m.items.length, 0);
       const faltan = Object.entries(datos.modulos).filter(([, m]) => !m.ok).map(([id]) => CFG.modulos[id].titulo);
-      BO.aviso('Excel cargado: ' + BO.n(total) + ' artículos.' + (faltan.length ? ' Falta la pestaña: ' + faltan.join(', ') : ''), faltan.length ? 'alerta' : 'ok');
+      if (!datos.ocAbiertas.ok) faltan.push('OC ABIERTAS');
+      const resumenOC = datos.ocAbiertas.ok ? ' ' + BO.n(datos.ocAbiertas.items.length) + ' OC abiertas.' : '';
+      BO.aviso('Excel cargado: ' + BO.n(total) + ' artículos.' + resumenOC +
+        (faltan.length ? ' Falta la pestaña: ' + faltan.join(', ') : ''), faltan.length ? 'alerta' : 'ok');
       document.dispatchEvent(new CustomEvent('bo:datos', { detail: datos }));
       BO.pintarInfoArchivo();
       return true;
@@ -863,7 +950,12 @@ window.BO = window.BO || {};
     agregarVarios(items) {
       const lista = BO.lista.obtener();
       let n = 0;
+      let clustersPendientes = 0;
       items.forEach(it => {
+        if (it.esCluster) {
+          if (it.sugerido) clustersPendientes++;
+          return;
+        }
         if (!it.sugerido) return;
         const clave = it.modulo + '|' + it.codigo;
         const existe = lista.find(x => x.clave === clave);
@@ -882,7 +974,15 @@ window.BO = window.BO || {};
         n++;
       });
       BO.lista.guardar(lista);
-      BO.aviso(n ? n + ' artículos agregados a la lista de compra.' : 'No hay artículos con compra sugerida en la vista actual.', n ? 'ok' : 'alerta');
+      const notaClusters = clustersPendientes
+        ? ' Para agregar el sugerido de un cluster, abre su fila y elige el código de compra.'
+        : '';
+      BO.aviso(n
+        ? n + ' artículos agregados a la lista de compra.' + notaClusters
+        : clustersPendientes
+          ? 'Los clusters requieren elegir el código al que se agregará el sugerido.'
+          : 'No hay artículos con compra sugerida en la vista actual.',
+      n ? 'ok' : 'alerta');
     },
     pintarContador() {
       const n = BO.lista.obtener().length;
